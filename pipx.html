@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="he">
+<head>
+  <meta charset="utf-8">
+  <title>תמונה לטבלת פיקסלים צבעונית</title>
+  <style>
+    body { font-family: Arial, sans-serif; direction: rtl; padding: 18px; }
+    label { display:block; margin: 8px 0 4px; }
+    #result { margin-top: 12px; overflow:auto; max-height:70vh; border:1px solid #ccc; padding:8px; }
+    table.pixelTable { border-collapse: collapse; }
+    table.pixelTable td { padding:0; margin:0; }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    button { padding:6px 10px; }
+    input[type="number"] { width:70px; }
+  </style>
+</head>
+<body>
+  <h2>המר תמונה לטבלת פיקסלים צבעונית</h2>
+  <div class="controls">
+    <div>
+      <label>בחר קובץ תמונה</label>
+      <input id="file" type="file" accept="image/*">
+    </div>
+    <div>
+      <label>מקס רוחב/גובה בפיקסלים</label>
+      <input id="maxSize" type="number" value="80" min="10" max="500">
+    </div>
+    <div>
+      <label>גודל תא (px)</label>
+      <input id="cellSize" type="number" value="6" min="2" max="40">
+    </div>
+    <div style="align-self:end">
+      <button id="convert">המר</button>
+      <button id="clear">נקה</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <canvas id="canvas" style="display:none"></canvas>
+
+  <script>
+    const fileInput = document.getElementById('file');
+    const maxSizeInput = document.getElementById('maxSize');
+    const cellSizeInput = document.getElementById('cellSize');
+    const convertBtn = document.getElementById('convert');
+    const clearBtn = document.getElementById('clear');
+    const resultDiv = document.getElementById('result');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function imageToTable(img, maxSize, cellSize){
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, maxSize / Math.max(w,h));
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
+      const data = ctx.getImageData(0,0,w,h).data;
+
+      const tbl = document.createElement('table');
+      tbl.className = 'pixelTable';
+
+      for(let y=0; y<h; y++){
+        const tr = document.createElement('tr');
+        for(let x=0; x<w; x++){
+          const i = (y*w + x)*4;
+          const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+          const td = document.createElement('td');
+          td.style.width = cellSize + 'px';
+          td.style.height = cellSize + 'px';
+          td.style.background = `rgba(${r},${g},${b},${a/255})`;
+          tr.appendChild(td);
+        }
+        tbl.appendChild(tr);
+      }
+      return tbl;
+    }
+
+    convertBtn.addEventListener('click', () => {
+      const file = fileInput.files[0];
+      if(!file){ alert('בחר קובץ תמונה קודם'); return; }
+      const maxSize = parseInt(maxSizeInput.value) || 80;
+      const cellSize = parseInt(cellSizeInput.value) || 6;
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          resultDiv.innerHTML = '';
+          const table = imageToTable(img, maxSize, cellSize);
+          resultDiv.appendChild(table);
+        }
+        img.src = e.target.result;
+      }
+      reader.readAsDataURL(file);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      resultDiv.innerHTML = '';
+      fileInput.value = '';
+    });
+  </script>
+</body>
+</html>
